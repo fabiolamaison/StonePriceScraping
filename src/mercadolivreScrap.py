@@ -21,12 +21,12 @@ def getData(link):
     cleaned_results = search_results
 
     # dicionário que guardará os valores pertinentes dos itens desejados, contendo uma lista com o nome dos itens descartados para posterior analise
-    item_data = {'Names':[],'Prices':[],'Review': {'Value': [],'Amount':[]},'Links':[], 'Popped':[]}
+    item_data = {'Names':[],'Prices':[],'Discounts':{'Amount':[],'Percentage':[]},'Review': {'Value': [],'Amount':[]},'Links':[], 'Popped':[]}
 
     # iteração para retirar os nomes de cada item, e descartar/limpar os que não contenham a palavra chave desejada (analisar caso a caso)
     for result in search_results:
         name = result.find('h2',{'class':'ui-search-item__title'}).text
-        if name.lower().__contains__('pedra') == True:
+        if name.lower().__contains__('pedra') or name.lower().__contains__('agata'):
             item_data['Names'].append(name)
         else:
             item_data['Popped'].append(name)
@@ -42,20 +42,38 @@ def getData(link):
         item_data['Links'].append(link)
 
         # capta o preço
-        price = result.find('span',{'class':'andes-visually-hidden'}).text    
+        price = result.find('span',{'class':'andes-money-amount ui-search-price__part ui-search-price__part--medium andes-money-amount--cents-superscript'}).find('span',{'class':'andes-visually-hidden'}).text    
+
+        # capta, se existente, o valor original, que será utilizado para calcular o desconto ofertado
+        try:
+            original_val = result.find('s',{'class':'andes-money-amount ui-search-price__part ui-search-price__part--small ui-search-price__original-value andes-money-amount--previous andes-money-amount--cents-superscript andes-money-amount--compact'}).find('span',{'class':'andes-visually-hidden'}).text
+        except:
+            original_val = 'NaN'
 
         # as condicionais a seguir limpam o valor referente ao preço do produto
-        if price.lower().__contains__('antes:'):
+        if original_val.lower().__contains__('antes:'):
 
-            price = price[(price.find(':')+1):]
+            original_val = original_val[(original_val.find(':')+2):]
 
         if price.lower().__contains__('centavos'):
             price = price[0:(price.find('reais')-1)] + '.' + price[(price.find('com')+4):(price.find('centavos')-1)]
         else:
             price = price[0:(price.find('reais')-1)] + '.00'
 
-        # guarda o valor do produto na chave 'prices' 
-        item_data['Prices'].append(price)
+        # já essas condicionais limpam e calculam o valor referente ao disconto
+        if original_val != 'NaN':
+            if original_val.lower().__contains__('centavos'):
+                original_val = original_val[0:(original_val.find('reais')-1)] + '.' + original_val[(original_val.find('com')+4):(original_val.find('centavos')-1)]
+            else:
+                original_val = original_val[0:(original_val.find('reais')-1)] + '.00'
+            
+            discount_val = float(original_val) - float(price)
+            discount_pct = float(discount_val)/float(original_val)*100
+            
+        # guarda valores referente ao preço e descontos, caso existentes, do produto ofertado, nas respectivas chaves
+        item_data['Prices'].append("{:.2f}".format(float(price)))
+        item_data['Discounts']['Amount'].append("{:.2f}".format(float(discount_val)))
+        item_data['Discounts']['Percentage'].append("{:.2f}".format(float(discount_pct)))
         
         # capta o valor médio da review
         review_value = result.find('span',{'class':'ui-search-reviews__rating-number'})
@@ -65,10 +83,12 @@ def getData(link):
             review_value = review_value.text
         except:
             review_value = 'NaN'
-        print(review_value)
+        
 
         # realiza append da variável contendo a média de reviews à chave 'Value' dentro de 'Review'
         item_data['Review']['Value'].append(review_value)
+
+        
 
         # capta o total de reviews
         review_value = result.find('span',{'class':'ui-search-reviews__amount'})
@@ -81,6 +101,9 @@ def getData(link):
 
         # realiza append da variável contendo a quantidade de reviews à chave 'Amount' dentro de 'Review'
         item_data['Review']['Amount'].append(review_value)
+
+    print(item_data['Discounts'])
+    print(item_data['Prices'])
 
 
 
