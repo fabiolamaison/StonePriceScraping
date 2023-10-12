@@ -11,29 +11,28 @@ import copy
 Links = ['https://lista.mercadolivre.com.br/ametista-1kg_NoIndex_True']
 
 def pages_link(link,pages):
-    rg = list(range(51,((pages+1)*50+1),50))
-    links = []
+    rg = list(range(51,(pages*50+1),50))
+    links = [link]
     for num in rg:
         new_link = link[0:link.find('NoIndex')] + 'Desde_' + str(num) + link[link.find('_NoIndex'):]
         links.append(new_link)
     return links
 
 def contains_keywords(string, keys):
+
     for key in keys:
-        if key in string:
+        if string.lower().__contains__(key.lower()):
             return True
     return False
 
 ## função para retirar os dados de cada item ofertado na página
 def getData(link, key_words = ''):
-
+    print(key_words)
     source_html = requests.get(link)
     page_parser = bs(source_html.text,'html.parser')
 
     # variável que guarda todos os dados html dos itens ofertados, serve para toda página resultado de pesquisa do mercado livre
     search_results = page_parser.find('ol',{'class':'ui-search-layout ui-search-layout--stack'}).find_all('li',{'class':'ui-search-layout__item'})
-
-    buebue_results = page_parser.find('ol',{'class':'ui-search-layout ui-search-layout--stack'}).find_all('li',{'class':'ui-search-layout__item','style':'display: none !important;'})
 
     # variável criada para facilitar a limpeza dos dados durante iteração posterior.
     cleaned_results = copy.copy(search_results)
@@ -44,13 +43,13 @@ def getData(link, key_words = ''):
     # iteração para retirar os nomes de cada item, e descartar/limpar os que não contenham a palavra chave desejada (analisar caso a caso)
     for result in search_results:
 
-        name = result.find('h2',{'class':'ui-search-item__title'}).text
+        name = result.find('h2',{'class':'ui-search-item__title'}).text.strip()
         if contains_keywords(name, key_words) or key_words == '':
             item_data['Names'].append(name)
         else:
             item_data['Popped'].append(name)
             cleaned_results.pop(cleaned_results.index(result))
-    
+
     # utilizando a lista já limpa de resultados, esta iteração retira o valor do produto, dados sobre as avaliações, e guarda seu respectivo link
     for result in cleaned_results:
 
@@ -159,7 +158,7 @@ def generateLink(pesquisa):
     print(link)
     return link
 
-pages_links = pages_link(generateLink('arroz branco'),10)
+pages_links = pages_link(generateLink('agata 1kg'),10)
 print(pages_links)
 
 def join_dicts(dict1, dict2):
@@ -195,7 +194,8 @@ def multiScrap(links, key_words = ''):
 
     main_df = pd.DataFrame(all_data)
     main_df.to_csv('G:/Workspace/WebScrap/backData/test.csv')
-    print(main_df)
+    return main_df
 
 
-multiScrap(pages_links)
+maind_df = multiScrap(pages_links,key_words=['pedra','agata','ágata'])
+print(maind_df['Names'])
